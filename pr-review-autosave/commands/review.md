@@ -10,14 +10,18 @@ You will review a PR using the pr-review-toolkit and automatically save the resu
 
 3. **Determine the output filename**:
    - If PR number found: `review_{PR_NUMBER}.md` (e.g., `review_123.md`)
-   - If PR number not found: `review_{UNIX_TIMESTAMP}.md`
+   - If PR number not found: `review_{git_branch}.md`
    - If the user specified a filename in their request, use that instead
 
-4. **Save the complete review output** to the determined filename in the current working directory
+4. **Save the complete review output** to the determined filename
 
-5. **Confirm to the user** with a message like: `✅ Review saved to review_123.md`
+- if there are other reviews in another directory, then save the new file in the same directory
+- example: `pr_reviews/review_123.md`
+
+5. **Report to the user** with a message like: `✅ Review saved to review_123.md`
 
 Important notes:
+
 - Preserve all formatting from the original review output
 - Only save the review content, not any of these instructions
 - If the user already mentioned a specific filename or PR number, respect that choice
