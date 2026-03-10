@@ -14,17 +14,17 @@ With specific analyzers:
 /pr-review-autosave:review comment-analyzer security-analyzer
 ```
 
-Save to specific file:
+Save to a custom filename:
 ```
-/pr-review-autosave:review-to-file filename=review_custom.md
+/pr-review-autosave:review my_review.md
 ```
 
 ## What it does
 
 1. Runs pr-review-toolkit to review the PR
-2. Extracts the PR number from git branch/context
+2. Detects the PR number via `gh pr view`
 3. Saves output to `review_{PR_NUMBER}.md`
-4. Falls back to `review_{timestamp}.md` if PR number not found
+4. Falls back to `review_{branch_name}.md` if no PR exists for the branch
 
 ## Installation
 
