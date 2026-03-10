@@ -7,7 +7,14 @@ You will review a PR using the pr-review-toolkit and automatically save the resu
 
 1. **Run the PR review**: Invoke the pr-review-toolkit to perform the review as requested by the user. Use `/pr-review-toolkit:review-pr` with any specific analyzers they mention (e.g., comment-analyzer, security-analyzer).
 
-2. **Format the review output**: Assign each issue a sequential global index starting at 1, incrementing across all categories. For example, if there are 3 critical issues, 1 important, and 1 suggestion, number them 1-3 (critical), 4 (important), 5 (suggestion). Each item should be prefixed with its index like `[#1]`, `[#2]`, etc. The numbering must be continuous across all severity categories — do not restart numbering within each category.
+2. **Reformat with sequential numbering**: After receiving the review output, you MUST post-process it before saving. Assign each issue a sequential global index starting at 1, incrementing continuously across ALL severity categories. Do not restart numbering within each category.
+
+   Example with 3 critical, 1 important, 1 suggestion:
+   - Critical: `[#1]`, `[#2]`, `[#3]`
+   - Important: `[#4]`
+   - Suggestion: `[#5]`
+
+   Replace each bullet point's prefix with its `[#N]` index. This numbering is mandatory — never save a review without it.
 
 3. **Determine the output filename** using this priority:
    - If the user specified a filename in their request, use that
