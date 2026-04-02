@@ -11,6 +11,7 @@ Determine whether this is a PR or WIP (work-in-progress) review:
 - Run `gh pr view --json number,title -q '"\(.number)\t\(.title)"'` for the current branch
 - If a PR exists: this is a **PR review**. Record the PR number and title.
 - If no PR exists: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
+- In both cases, record the short commit hash of HEAD (`git rev-parse --short HEAD`) for the header metadata.
 
 ## 2. Check for previous reviews
 
@@ -73,6 +74,7 @@ If this is a re-review, compare the current findings against the previous review
 # PR#123 - PR title here
 
 **Branch:** `branch-name`
+**Commit:** `abc1234`
 **Reviewed:** YYYY-MM-DD
 **Files changed:** N (X insertions, Y deletions)
 
@@ -90,6 +92,7 @@ If this is a versioned re-review (v2+), add the review version line:
 # PR#123 - PR title here
 
 **Branch:** `branch-name`
+**Commit:** `abc1234`
 **Reviewed:** YYYY-MM-DD
 **Review version:** v2 (previous: v1 on YYYY-MM-DD)
 **Files changed:** N (X insertions, Y deletions)
@@ -108,6 +111,7 @@ Brief summary of what the changes actually do.
 # abc1234
 
 **Branch:** `branch-name`
+**Commit:** `abc1234`
 **Reviewed:** YYYY-MM-DD
 **Files changed:** N (X insertions, Y deletions)
 
