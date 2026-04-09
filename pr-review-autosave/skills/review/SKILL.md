@@ -9,8 +9,12 @@ You will review a PR (or WIP changes) using the pr-review-toolkit and automatica
 
 Determine whether this is a PR or WIP (work-in-progress) review:
 - Run `gh pr view --json number,title -q '"\(.number)\t\(.title)"'` for the current branch
-- If a PR exists: this is a **PR review**. Record the PR number and title.
-- If no PR exists: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
+- If that fails (no PR found for the local branch name), the local branch may differ from the remote branch (e.g. in worktrees). Try a fallback:
+  - Get the upstream tracking branch: `git rev-parse --abbrev-ref @{upstream}` (e.g. `origin/user/feat-branch`)
+  - Strip the remote prefix to get the remote branch name (e.g. `user/feat-branch`)
+  - Retry with: `gh pr list --head "<remote-branch-name>" --json number,title -q '"\(.[0].number)\t\(.[0].title)"'`
+- If a PR exists (from either method): this is a **PR review**. Record the PR number and title.
+- If no PR exists after both attempts: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
 - In both cases, record the short commit hash of HEAD (`git rev-parse --short HEAD`) for the header metadata.
 
 ## 2. Check for previous reviews
