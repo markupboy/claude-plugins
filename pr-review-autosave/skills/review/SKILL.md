@@ -1,5 +1,10 @@
 ---
-description: Review a PR and automatically save results to a markdown file
+description: >
+  Review a PR and automatically save results to a markdown file.
+  Use when the user asks to "review and save", "save a review",
+  "review this PR and save it", "write a PR review to file",
+  or mentions saving, autosaving, or writing review output.
+  This wraps pr-review-toolkit and adds file output.
 argument-hint: [filename]
 ---
 
