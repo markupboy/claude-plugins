@@ -32,6 +32,6 @@ Enable it in your `~/.claude/settings.json`:
 
 ```json
 "enabledPlugins": {
-  "pr-review-autosave@cts-claude-marketplace": true
+  "pr-review-autosave@catsby-claude": true
 }
 ```

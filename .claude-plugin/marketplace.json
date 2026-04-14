@@ -1,14 +1,12 @@
 {
-  "name": "cts-claude-marketplace",
+  "name": "catsby-claude",
+  "description": "Claude Code plugins by Clint Shryock",
+  "url": "https://github.com/catsby/claude-plugins",
   "owner": {
-    "name": "Clint Shryock"
+    "name": "Clint Shryock",
+    "email": "info@ctshryock.com"
   },
   "plugins": [
-    {
-      "name": "code-review-local",
-      "source": "./code-review-local",
-      "description": "Code Review with local review file creation"
-    },
     {
       "name": "pr-review-autosave",
       "source": "./pr-review-autosave",
