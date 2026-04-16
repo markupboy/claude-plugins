@@ -1,10 +1,10 @@
 {
-  "name": "catsby-claude",
-  "description": "Claude Code plugins by Clint Shryock",
-  "url": "https://github.com/catsby/claude-plugins",
+  "name": "markupboy-claude",
+  "description": "Claude Code plugins by markupboy (liberally borrowed from Clint Shryock)",
+  "url": "https://github.com/markupboy/claude-plugins",
   "owner": {
-    "name": "Clint Shryock",
-    "email": "info@ctshryock.com"
+    "name": "Blake Walters",
+    "email": "blake@markupboy.com"
   },
   "plugins": [
     {

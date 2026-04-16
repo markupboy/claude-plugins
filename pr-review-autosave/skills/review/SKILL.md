@@ -13,6 +13,7 @@ You will review a PR (or WIP changes) using the pr-review-toolkit and automatica
 ## 1. Detect context
 
 Determine whether this is a PR or WIP (work-in-progress) review:
+
 - Run `gh pr view --json number,title -q '"\(.number)\t\(.title)"'` for the current branch
 - If that fails (no PR found for the local branch name), the local branch may differ from the remote branch (e.g. in worktrees). Try a fallback:
   - Get the upstream tracking branch: `git rev-parse --abbrev-ref @{upstream}` (e.g. `origin/user/feat-branch`)
@@ -25,7 +26,8 @@ Determine whether this is a PR or WIP (work-in-progress) review:
 ## 2. Check for previous reviews
 
 Look for existing review files to determine if this is a versioned re-review:
-- If there is a `pr_reviews/` directory in the project, look there. Otherwise look in the current directory.
+
+- If there is a `pr_reviews/` directory in the project, look there. Otherwise, create one.
 - For PR reviews: look for files matching `review_{PR_NUMBER}*.md` (e.g., `review_123.md`, `review_123_v2.md`)
 - For WIP reviews: look for files matching `review_{SHORT_HASH}*.md`
 - If previous reviews exist:
@@ -44,6 +46,7 @@ Invoke the pr-review-toolkit to perform the review as requested by the user. Use
 After receiving the review output, post-process it before saving. Assign each issue a sequential global index starting at 1, incrementing continuously across ALL severity categories. Do not restart numbering within each category.
 
 Example with 3 critical, 1 important, 1 suggestion:
+
 - Critical: `[#1]`, `[#2]`, `[#3]`
 - Important: `[#4]`
 - Suggestion: `[#5]`
@@ -56,10 +59,11 @@ Each issue MUST include version and status metadata on the line immediately afte
 
 ```markdown
 [#1] **Some issue title** — `file.ts:42`
-*Introduced: v1 | Status: open*
+_Introduced: v1 | Status: open_
 ```
 
 Rules:
+
 - For first-time reviews (v1): all issues are `Introduced: v1 | Status: open`
 - For re-reviews (v2+):
   - Issues carried forward from a previous version keep their original `Introduced: vN`
@@ -70,6 +74,7 @@ Rules:
 ## 6. Compare with previous review (v2+ only)
 
 If this is a re-review, compare the current findings against the previous review:
+
 - Issues from the previous review that are no longer found: mark as **fixed**
 - Issues from the previous review that are still present: carry forward as **open** with their original `Introduced` version
 - **Dismissed** issues: carry forward silently (do not re-evaluate)
@@ -88,6 +93,7 @@ If this is a re-review, compare the current findings against the previous review
 **Files changed:** N (X insertions, Y deletions)
 
 ## Description
+
 Brief summary of what the changes actually do.
 
 **Description accuracy:** X/10 — how well the PR description matches the actual changes
@@ -107,6 +113,7 @@ If this is a versioned re-review (v2+), add the review version line:
 **Files changed:** N (X insertions, Y deletions)
 
 ## Description
+
 Brief summary of what the changes actually do.
 
 **Description accuracy:** X/10 — how well the PR description matches the actual changes
@@ -130,6 +137,7 @@ Brief summary of what the changes actually do.
 WIP reviews omit the Description and Description accuracy sections entirely.
 
 Notes:
+
 - **Files changed** is optional — include it when the data is available, omit when not
 - **Branch** never includes the target branch (no `-> main`)
 
@@ -143,7 +151,7 @@ If any issues were fixed since the previous review, add this section immediately
 - [#2] `publish` command does not use `changeset publish` — resolved
 - [#5] Missing dependabot guard — resolved
 
-------
+---
 ```
 
 Use `------` (six hyphens) to separate this section from the main findings. Reference the version the issues were originally introduced in if different from v1.
@@ -151,6 +159,7 @@ Use `------` (six hyphens) to separate this section from the main findings. Refe
 ## 9. Determine the output filename
 
 Using this priority:
+
 - If the user specified a filename in their request, use that
 - Otherwise, for PR reviews:
   - First review: `review_{PR_NUMBER}.md` (e.g., `review_123.md`)

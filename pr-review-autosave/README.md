@@ -5,16 +5,19 @@ Automatically saves PR review results to markdown files.
 ## Usage
 
 Basic usage (auto-detects PR number):
+
 ```
 /pr-review-autosave:review
 ```
 
 With specific analyzers:
+
 ```
 /pr-review-autosave:review comment-analyzer security-analyzer
 ```
 
 Save to a custom filename:
+
 ```
 /pr-review-autosave:review my_review.md
 ```
@@ -32,6 +35,6 @@ Enable it in your `~/.claude/settings.json`:
 
 ```json
 "enabledPlugins": {
-  "pr-review-autosave@catsby-claude": true
+  "pr-review-autosave@markupboy-claude": true
 }
 ```
