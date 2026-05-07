@@ -11,6 +11,11 @@
       "name": "pr-review-autosave",
       "source": "./pr-review-autosave",
       "description": "PR review that automatically saves results to markdown files"
+    },
+    {
+      "name": "noteplan-import",
+      "source": "./noteplan-import",
+      "description": "Save Claude's long-form markdown research output into NotePlan 3 on macOS"
     }
   ]
 }

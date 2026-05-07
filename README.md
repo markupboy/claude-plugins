@@ -5,6 +5,7 @@ Custom Claude Code plugins (borrowed from Clint Shryock).
 ## Plugins
 
 - **pr-review-autosave** - PR review that automatically saves results to markdown files with a consistent, versioned format
+- **noteplan-import** - Save Claude's long-form markdown research output into NotePlan 3 on macOS as a searchable, tagged note
 
 ## Review Output Format
 
