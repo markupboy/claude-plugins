@@ -16,6 +16,11 @@
       "name": "noteplan-import",
       "source": "./noteplan-import",
       "description": "Save Claude's long-form markdown research output into NotePlan 3 on macOS"
+    },
+    {
+      "name": "vulnerability-review",
+      "source": "./vulnerability-review",
+      "description": "Triage open GitHub Dependabot alerts and recommend the smallest set of dependency bumps to clear them"
     }
   ]
 }
