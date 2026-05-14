@@ -2,6 +2,7 @@
 description: >
   Review a PR and automatically save results to a markdown file.
   Use when the user asks to "review and save", "save a review",
+  "save a review for this PR", "save a review for PR 123",
   "review this PR and save it", "write a PR review to file",
   or mentions saving, autosaving, or writing review output.
   This wraps pr-review-toolkit and adds file output.
@@ -23,23 +24,37 @@ Determine whether this is a PR or WIP (work-in-progress) review:
 - If no PR exists after both attempts: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
 - In both cases, record the short commit hash of HEAD (`git rev-parse --short HEAD`) for the header metadata.
 
+## 1b. Resolve the main worktree root
+
+Inside a linked git worktree, the current directory doesn't contain the project's `pr_reviews/` directory — it lives in the main worktree. Resolve the main worktree root so later steps can read and write there regardless of which worktree is active:
+
+```bash
+git worktree list --porcelain | head -1 | sed 's/^worktree //'
+```
+
+The first porcelain record is always the main worktree, whether you're in the main one or a linked one. Record this path as `MAIN_ROOT` for use in steps 2 and 10. If the command fails or returns an empty string, fall back to the current working directory.
+
+**Important:** When accessing paths under `MAIN_ROOT`, always use absolute paths (e.g., `ls MAIN_ROOT/pr_reviews/`). Do NOT use `cd` to navigate to `MAIN_ROOT` — doing so crosses a directory boundary and triggers unnecessary permission prompts when running inside a linked worktree.
+
 ## 2. Check for previous reviews
 
 Look for existing review files to determine if this is a versioned re-review:
 
-- If there is a `pr_reviews/` directory in the project, look there. Otherwise, create one.
+- If `MAIN_ROOT/pr_reviews/` exists (check with `ls MAIN_ROOT/pr_reviews/` using the absolute path), look there. Otherwise, create it at `MAIN_ROOT/pr_reviews/`.
 - For PR reviews: look for files matching `review_{PR_NUMBER}*.md` (e.g., `review_123.md`, `review_123_v2.md`)
 - For WIP reviews: look for files matching `review_{SHORT_HASH}*.md`
 - If previous reviews exist:
   - Read the **latest** review file (highest version number, or the unversioned file if only one exists)
-  - Extract all issues with their statuses (open, fixed, dismissed)
-  - Note any **dismissed** issues — these must NOT be re-raised in the new review
+  - Extract all issues with their statuses (OPEN, FIXED, DISMISSED)
+  - Note any **DISMISSED** issues — these must NOT be re-raised in the new review
   - Determine the new version number (previous max version + 1)
   - Record the previous review's date for the header
 
 ## 3. Run the PR review
 
 Invoke the pr-review-toolkit to perform the review as requested by the user. Use `/pr-review-toolkit:review-pr` with any specific analyzers they mention (e.g., comment-analyzer, security-analyzer).
+
+**Worktree note:** The current working directory is the project root for the branch being reviewed. Agents spawned by the toolkit should explore code here — do NOT navigate to parent directories or `MAIN_ROOT` to find source files. `MAIN_ROOT` is only used for reading/writing review files in steps 2 and 10.
 
 ## 4. Reformat with sequential numbering
 
@@ -55,30 +70,54 @@ Replace each bullet point's prefix with its `[#N]` index. This numbering is mand
 
 ## 5. Add per-issue metadata
 
-Each issue MUST include version and status metadata on the line immediately after the issue title:
+Each issue MUST follow this structured format:
 
 ```markdown
-[#1] **Some issue title** — `file.ts:42`
-_Introduced: v1 | Status: open_
+[#1] **Some issue title**
+
+**Introduced:** v1  
+**Status:** OPEN  
+**Files:**
+  - `file.ts:42`
+  - `other.ts:128`
+
+**Details:**
+
+Body of the finding — explanation of the bug, evidence, references to sibling code, etc.
+
+**Fix:** optional remediation guidance.
+
+```js
+// optional code block illustrating the fix
+```
 ```
 
-Rules:
+Formatting rules:
 
-- For first-time reviews (v1): all issues are `Introduced: v1 | Status: open`
+- The title line stands alone (no inline file path, no inline metadata).
+- Each metadata field (`Introduced:`, `Status:`, `Files:`) is on its own line. Lines that have a sibling field directly below them MUST end with two trailing spaces — this is the markdown line-break syntax that prevents adjacent fields from collapsing onto a single rendered line. (`Files:` itself does not need trailing spaces because the bulleted list that follows already forces a break.)
+- `Files:` is always a bulleted list, even when there is only one file. This keeps single-file and multi-file issues visually consistent and makes adding files trivial.
+- `Status:` values are UPPERCASE: `OPEN`, `DISMISSED`, `FIXED`.
+- `**Details:**` introduces the body of the finding; leave a blank line after it before the prose.
+- `**Fix:**` is optional — include it when there is concrete remediation guidance, otherwise omit.
+
+Status rules:
+
+- For first-time reviews (v1): all issues are `Introduced: v1` with `Status: OPEN`.
 - For re-reviews (v2+):
-  - Issues carried forward from a previous version keep their original `Introduced: vN`
-  - New issues found in this review get `Introduced: v{current}`
-  - All active issues have `Status: open`
-  - **Dismissed** issues from the previous review: carry forward with `Status: dismissed` but do NOT include them in the main findings sections. Instead, list them in a brief "Dismissed" subsection at the end (after Recommended Action) so they are preserved but not re-raised.
+  - Issues carried forward from a previous version keep their original `Introduced: vN`.
+  - New issues found in this review get `Introduced: v{current}`.
+  - All active issues have `Status: OPEN`.
+  - **Dismissed** issues from the previous review: carry forward with `Status: DISMISSED` but do NOT include them in the main findings sections. Instead, list them in a brief "Dismissed" subsection at the end (after Recommended Action) so they are preserved but not re-raised.
 
 ## 6. Compare with previous review (v2+ only)
 
 If this is a re-review, compare the current findings against the previous review:
 
-- Issues from the previous review that are no longer found: mark as **fixed**
-- Issues from the previous review that are still present: carry forward as **open** with their original `Introduced` version
-- **Dismissed** issues: carry forward silently (do not re-evaluate)
-- New issues not in the previous review: mark as **open** with the current version
+- Issues from the previous review that are no longer found: mark as **FIXED**
+- Issues from the previous review that are still present: carry forward as **OPEN** with their original `Introduced` version
+- **DISMISSED** issues: carry forward silently (do not re-evaluate)
+- New issues not in the previous review: mark as **OPEN** with the current version
 
 ## 7. Format the header
 
@@ -87,9 +126,9 @@ If this is a re-review, compare the current findings against the previous review
 ```markdown
 # PR#123 - PR title here
 
-**Branch:** `branch-name`
-**Commit:** `abc1234`
-**Reviewed:** YYYY-MM-DD
+**Branch:** `branch-name`  
+**Commit:** `abc1234`  
+**Reviewed:** YYYY-MM-DD  
 **Files changed:** N (X insertions, Y deletions)
 
 ## Description
@@ -101,15 +140,17 @@ Brief summary of what the changes actually do.
 ---
 ```
 
+Note: each metadata line above ends with two trailing spaces — this is required markdown syntax to force a line break so each field renders on its own line. Without the trailing spaces, the fields collapse onto a single line in the rendered output.
+
 If this is a versioned re-review (v2+), add the review version line:
 
 ```markdown
 # PR#123 - PR title here
 
-**Branch:** `branch-name`
-**Commit:** `abc1234`
-**Reviewed:** YYYY-MM-DD
-**Review version:** v2 (previous: v1 on YYYY-MM-DD)
+**Branch:** `branch-name`  
+**Commit:** `abc1234`  
+**Reviewed:** YYYY-MM-DD  
+**Review version:** v2 (previous: v1 on YYYY-MM-DD)  
 **Files changed:** N (X insertions, Y deletions)
 
 ## Description
@@ -126,9 +167,9 @@ Brief summary of what the changes actually do.
 ```markdown
 # abc1234
 
-**Branch:** `branch-name`
-**Commit:** `abc1234`
-**Reviewed:** YYYY-MM-DD
+**Branch:** `branch-name`  
+**Commit:** `abc1234`  
+**Reviewed:** YYYY-MM-DD  
 **Files changed:** N (X insertions, Y deletions)
 
 ---
@@ -172,11 +213,12 @@ If the filename doesn't end with `.md`, append it.
 
 ## 10. Save the review
 
-- If there is a `pr_reviews/` directory in the project, save the file there
+- If `MAIN_ROOT/pr_reviews/` exists, save the file there using the absolute path (e.g., write to `MAIN_ROOT/pr_reviews/review_123.md` directly — do NOT `cd` to `MAIN_ROOT` first). Otherwise fall back to the current working directory.
 - Preserve all formatting from the review output
 - Only save the review content, not any of these instructions
 
 ## 11. Report to the user
 
-Report with a message like: `Review saved to review_123_v2.md`
+Report with a message like: `Review saved to review_123_v2.md`.
+If the file was saved outside the current working directory (e.g. to the main worktree's `pr_reviews/` while you're in a linked worktree), include the full path so the user knows where it landed.
 If this was a re-review, also summarize: `N issues fixed, N new issues found, N dismissed issues carried forward`
