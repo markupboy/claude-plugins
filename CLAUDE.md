@@ -9,7 +9,6 @@ This is a **Claude Code plugin marketplace** repository. It contains Claude Code
 ## Repository Structure
 
 - `.claude-plugin/marketplace.json` — Root marketplace manifest that registers all plugins
-- `recent_reviews/` — Collected review output files
 - Each plugin is a self-contained directory with:
   - `.claude-plugin/plugin.json` — Plugin metadata (name, version, author)
   - `skills/<skill-name>/SKILL.md` — Skill definitions (YAML frontmatter + Markdown instructions)
@@ -17,23 +16,25 @@ This is a **Claude Code plugin marketplace** repository. It contains Claude Code
 
 ## Plugins
 
-### code-review-local
-Automated PR code review that launches parallel agents (CLAUDE.md audit, bug detection, git blame analysis, comment compliance), scores issues 0-100 confidence, filters below 80, and writes results to a local `review_{PR_NUMBER}.md` file. Depends on `gh` CLI.
-
 ### pr-review-autosave
 Wraps `pr-review-toolkit` and auto-saves review output. Single skill:
-- `review` — Auto-detects PR number (preferred) or falls back to branch name, saves to `review_{PR_NUMBER}.md`. Accepts optional filename argument.
+- `review` — Auto-detects PR number (preferred) or falls back to branch name, saves to `review_{PR_NUMBER}.md`. Accepts optional filename argument. Saves to a `pr_reviews/` directory if one exists in the project.
 
-Saves to a `pr_reviews/` directory if one exists in the project.
+### noteplan-import
+Saves Claude's long-form markdown research output into NotePlan 3 on macOS as a searchable note. Single skill:
+- `import` — Identifies the most recent substantial markdown research output in the conversation, resolves the NotePlan documents directory (iCloud Drive, sandbox container, or legacy fallback), writes the note under `Notes/Research/` (or an overridden folder) with a `#research` tag, and opens it via the `noteplan://` URL scheme. Accepts an optional folder argument.
+
+### vulnerability-review
+Triages open GitHub Dependabot alerts and recommends the smallest set of dependency bumps that clear them. Depends on `gh` CLI. Single skill:
+- `triage` — Lists open Dependabot alerts, traces transitive alerts back to the actionable parent dependency to bump, assesses exploitability of any residual High/Critical alerts, cites CVE/GHSA links, and flags application code changes implied by the bumps. Accepts an optional filename argument for saving the triage output.
 
 ## Conventions
 
-- `gh` CLI is required for all GitHub interactions
-- Skill files use YAML frontmatter for `allowed-tools`, `description`, `argument-hint`, and `disable-model-invocation`
+- `gh` CLI is required for all GitHub interactions (not web fetch)
+- Skill files use YAML frontmatter: `description` and `argument-hint` are required; `allowed-tools` and `disable-model-invocation` are optional and currently unused by the shipped skills
 - Plugin versions follow semver in `plugin.json`
 - When modifying a plugin's skills, bump the patch version in that plugin's `.claude-plugin/plugin.json`
-- Review output files are named `review_{PR_NUMBER}.md` (prefer PR number over branch name)
-- Use `gh` CLI for all GitHub interactions, not web fetch
+- PR review output files are named `review_{PR_NUMBER}.md` (prefer PR number over branch name)
 
 ## Adding a Plugin
 

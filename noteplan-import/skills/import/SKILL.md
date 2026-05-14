@@ -18,7 +18,7 @@ The optional argument is a destination subfolder name relative to `Notes/`.
 
 - Trim whitespace.
 - If empty or missing, use `Research`.
-- Reject names that contain `/`, `..`, start with `@`, or start with `.`. If invalid, ask the user for a valid folder name and stop.
+- Reject names that contain `/`, are exactly `..`, contain `/..` or `../`, start with `@`, or start with `.`. If invalid, ask the user for a valid folder name and stop.
 
 Record the result as `FOLDER`.
 
@@ -63,7 +63,7 @@ Sample the destination folder first, then fall back to `Notes/`:
 ```bash
 ls -1 "$DOCS_DIR/Notes/$FOLDER" 2>/dev/null \
   | grep -E '\.(txt|md)$' \
-  | sed -n 's/.*\.\(txt\|md\)$/\1/p' \
+  | sed -E -n 's/.*\.(txt|md)$/\1/p' \
   | sort | uniq -c | sort -rn | head -1
 ```
 
@@ -107,7 +107,19 @@ Compute `OUT_PATH = "$DOCS_DIR/Notes/$FOLDER/$STEM$EXT"`.
 
 ## 8. Compose the file content
 
-The body to write:
+If `BODY` opens with YAML frontmatter (`---\n…\n---\n`), preserve the frontmatter as-is and inject the H1 and tag *after* the closing `---`:
+
+```
+---
+...frontmatter...
+---
+# <TITLE>
+#research
+
+<BODY-after-frontmatter>
+```
+
+Otherwise, prepend the H1 and tag directly:
 
 ```
 # <TITLE>
@@ -116,12 +128,12 @@ The body to write:
 <BODY>
 ```
 
-Where `<BODY>` is the original `BODY` with the original H1 line removed *if* it matched the title chosen in step 5 (avoid duplication). Preserve everything else verbatim — tables, code fences, links, NotePlan task syntax (`- [ ]`, `* foo`, `+ foo`). Do not reflow. End the file with a single trailing newline.
+In both cases:
 
-Special cases:
-
-- If `BODY` opens with YAML frontmatter (`---\n…\n---\n`), preserve it as-is and inject `# <TITLE>` and `#research` *after* the closing `---`.
-- If `BODY` already has `^#research(\s|$)` within its first 5 lines, skip prepending the tag.
+- If `BODY`'s first non-frontmatter line was an `# H1` matching the chosen `TITLE`, drop that line so it isn't duplicated.
+- If `BODY` already has `^#research(\s|$)` within its first 5 non-frontmatter lines, skip prepending the tag.
+- Preserve everything else verbatim — tables, code fences, links, NotePlan task syntax (`- [ ]`, `* foo`, `+ foo`). Do not reflow.
+- End the file with a single trailing newline.
 
 Write the file to `OUT_PATH`.
 

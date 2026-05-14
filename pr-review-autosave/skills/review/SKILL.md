@@ -19,10 +19,10 @@ Determine whether this is a PR or WIP (work-in-progress) review:
 - If that fails (no PR found for the local branch name), the local branch may differ from the remote branch (e.g. in worktrees). Try a fallback:
   - Get the upstream tracking branch: `git rev-parse --abbrev-ref @{upstream}` (e.g. `origin/user/feat-branch`)
   - Strip the remote prefix to get the remote branch name (e.g. `user/feat-branch`)
-  - Retry with: `gh pr list --head "<remote-branch-name>" --json number,title -q '"\(.[0].number)\t\(.[0].title)"'`
-- If a PR exists (from either method): this is a **PR review**. Record the PR number and title.
+  - Retry with: `gh pr list --head "<remote-branch-name>" --json number,title -q 'if length > 0 then "\(.[0].number)\t\(.[0].title)" else empty end'`
+  - No output means no PR was found; any output is the matched PR's number and title.
+- If a PR exists (from either method): this is a **PR review**. Record the PR number, title, and the short commit hash of HEAD (`git rev-parse --short HEAD`).
 - If no PR exists after both attempts: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
-- In both cases, record the short commit hash of HEAD (`git rev-parse --short HEAD`) for the header metadata.
 
 ## 1b. Resolve the main worktree root
 
@@ -72,7 +72,7 @@ Replace each bullet point's prefix with its `[#N]` index. This numbering is mand
 
 Each issue MUST follow this structured format:
 
-```markdown
+````markdown
 [#1] **Some issue title**
 
 **Introduced:** v1  
@@ -90,7 +90,7 @@ Body of the finding — explanation of the bug, evidence, references to sibling 
 ```js
 // optional code block illustrating the fix
 ```
-```
+````
 
 Formatting rules:
 

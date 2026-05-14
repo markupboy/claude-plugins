@@ -1,7 +1,7 @@
 {
   "name": "noteplan-import",
   "description": "Save Claude's long-form markdown research output into NotePlan 3 on macOS",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Blake Walters"
   }
