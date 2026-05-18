@@ -73,7 +73,7 @@ Replace each bullet point's prefix with its `[#N]` index. This numbering is mand
 Each issue MUST follow this structured format:
 
 ````markdown
-[#1] **Some issue title**
+## [#1] **Some issue title**
 
 **Introduced:** v1  
 **Status:** OPEN  
@@ -90,6 +90,9 @@ Body of the finding — explanation of the bug, evidence, references to sibling 
 ```js
 // optional code block illustrating the fix
 ```
+
+---
+
 ````
 
 Formatting rules:
