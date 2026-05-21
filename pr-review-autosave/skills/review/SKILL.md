@@ -5,7 +5,8 @@ description: >
   "save a review for this PR", "save a review for PR 123",
   "review this PR and save it", "write a PR review to file",
   or mentions saving, autosaving, or writing review output.
-  This wraps pr-review-toolkit and adds file output.
+  This wraps pr-review-toolkit, checks the linked Linear ticket
+  (when available) for completeness and accuracy, and adds file output.
 argument-hint: [filename]
 ---
 
@@ -36,6 +37,36 @@ The first porcelain record is always the main worktree, whether you're in the ma
 
 **Important:** When accessing paths under `MAIN_ROOT`, always use absolute paths (e.g., `ls MAIN_ROOT/pr_reviews/`). Do NOT use `cd` to navigate to `MAIN_ROOT` — doing so crosses a directory boundary and triggers unnecessary permission prompts when running inside a linked worktree.
 
+## 1c. Detect a related Linear issue
+
+If a Linear ticket is associated with the work, capture it so step 3 can evaluate whether the PR actually resolves it. Skip this step silently for WIP reviews that have no PR (no body/title to mine), but still check the branch name and recent commit messages.
+
+Search these sources in order for a Linear key matching the regex `[A-Z]{2,10}-\d+`:
+
+1. The branch name (e.g., `SCR-123-fix-thing` → `SCR-123`).
+2. The PR title (for PR reviews).
+3. The PR body — including `Closes`/`Fixes`/`Resolves` lines, the "Magic Words" section, and any Linear URL like `https://linear.app/<workspace>/issue/SCR-123/...`.
+4. Recent commit messages on the branch: `git log -n 20 --pretty=%B` (only relevant if nothing was found above).
+
+Record the **first** key found as `LINEAR_KEY`. If multiple distinct keys appear, prefer the one from the branch name, then the PR title, then the PR body, then commit messages. If no key is found, record `LINEAR_KEY` as empty and skip step 1d.
+
+## 1d. Fetch the Linear issue (when a key was found)
+
+If `LINEAR_KEY` is set, attempt to fetch the issue's details so the review can compare the PR against the ticket's stated requirements.
+
+- **Preferred path — Linear MCP:** if a Linear MCP server is available in this session, use it. Do not guess tool names: list the MCP tools (or read the server's tool schemas) first, then call the appropriate "get issue" / "get issue by identifier" tool with `LINEAR_KEY`. If the server reports it needs authentication, call its `mcp_auth` tool once and retry. If authentication still fails, fall through to the fallback.
+- **Fallback — none:** if no Linear MCP is available or the fetch fails, do **not** invent ticket details. Record that the ticket reference exists but its contents could not be retrieved, and proceed.
+
+When a fetch succeeds, capture:
+
+- Issue identifier and title
+- Issue URL
+- Current status / state (e.g., `In Progress`, `In Review`, `Done`)
+- Description and any acceptance criteria (often a bulleted list inside the description)
+- Labels relevant to scope (e.g., `bug`, `feature`, `chore`)
+
+Store this as `LINEAR_CONTEXT` for use in steps 3 and 7.
+
 ## 2. Check for previous reviews
 
 Look for existing review files to determine if this is a versioned re-review:
@@ -55,6 +86,14 @@ Look for existing review files to determine if this is a versioned re-review:
 Invoke the pr-review-toolkit to perform the review as requested by the user. Use `/pr-review-toolkit:review-pr` with any specific analyzers they mention (e.g., comment-analyzer, security-analyzer).
 
 **Worktree note:** The current working directory is the project root for the branch being reviewed. Agents spawned by the toolkit should explore code here — do NOT navigate to parent directories or `MAIN_ROOT` to find source files. `MAIN_ROOT` is only used for reading/writing review files in steps 2 and 10.
+
+**Linear-aware analysis:** if `LINEAR_CONTEXT` was captured in step 1d, treat the Linear ticket — not the PR description — as the source of truth for *what was supposed to be done*. After the toolkit finishes:
+
+- Compare the ticket's acceptance criteria (or, if none are explicit, the ticket description's intent) against the actual diff.
+- For each acceptance criterion or stated requirement, classify it as **met**, **partially met**, **not met**, or **out of scope for this PR** (e.g., explicitly deferred). Cite the file/line evidence for "met" verdicts when practical.
+- Treat any **not met** or **partially met** criterion as a finding in the regular sections (typically `Important` for missing required behavior, `Suggestion` for nice-to-have polish that the ticket called out). Use the issue body to quote the ticket's wording so the gap is traceable.
+- Flag **scope creep**: substantial changes in the diff that have no basis in the ticket (refactors, unrelated cleanups, feature additions). Surface these as `Suggestion` findings unless they introduce real risk, in which case escalate.
+- If `LINEAR_KEY` was found but `LINEAR_CONTEXT` could not be fetched (auth failure, no MCP, etc.), do not fabricate ticket contents. Note the limitation in step 7's Description block and skip the criterion-level analysis.
 
 ## 4. Reformat with sequential numbering
 
@@ -131,6 +170,7 @@ If this is a re-review, compare the current findings against the previous review
 
 **Branch:** `branch-name`  
 **Commit:** `abc1234`  
+**Linear:** [SCR-123](https://linear.app/workspace/issue/SCR-123) - Ticket title (State)  
 **Reviewed:** YYYY-MM-DD  
 **Files changed:** N (X insertions, Y deletions)
 
@@ -138,12 +178,27 @@ If this is a re-review, compare the current findings against the previous review
 
 Brief summary of what the changes actually do.
 
-**Description accuracy:** X/10 — how well the PR description matches the actual changes
+**Description accuracy:** X/10 — how well the PR description matches the actual changes  
+**Linear ticket alignment:** X/10 — how completely and accurately the PR resolves the linked ticket
+
+### Linear ticket coverage
+
+- **Met:** acceptance criteria fully addressed by this PR (one bullet per criterion)
+- **Partial:** criteria addressed but with gaps — link to the relevant finding `[#N]`
+- **Not met:** criteria the PR does not address — link to the relevant finding `[#N]`
+- **Out of scope:** criteria the PR explicitly defers (cite the PR/ticket note)
+- **Scope creep:** changes in the diff that aren't traceable to the ticket — link to the relevant finding `[#N]`
 
 ---
 ```
 
 Note: each metadata line above ends with two trailing spaces — this is required markdown syntax to force a line break so each field renders on its own line. Without the trailing spaces, the fields collapse onto a single line in the rendered output.
+
+Linear field rules:
+
+- Include the `**Linear:**` header line only when `LINEAR_KEY` was found in step 1c. Omit the line entirely when no key was found.
+- When `LINEAR_KEY` was found but `LINEAR_CONTEXT` could not be fetched, render the line as `**Linear:** SCR-123 (details unavailable)` and omit the "Linear ticket coverage" subsection. Replace the alignment score line with `**Linear ticket alignment:** n/a (ticket contents unavailable)`.
+- Omit the `**Linear ticket alignment:**` line and "Linear ticket coverage" subsection entirely when no Linear ticket was detected.
 
 If this is a versioned re-review (v2+), add the review version line:
 
@@ -152,6 +207,7 @@ If this is a versioned re-review (v2+), add the review version line:
 
 **Branch:** `branch-name`  
 **Commit:** `abc1234`  
+**Linear:** [SCR-123](https://linear.app/workspace/issue/SCR-123) - Ticket title (State)  
 **Reviewed:** YYYY-MM-DD  
 **Review version:** v2 (previous: v1 on YYYY-MM-DD)  
 **Files changed:** N (X insertions, Y deletions)
@@ -160,7 +216,16 @@ If this is a versioned re-review (v2+), add the review version line:
 
 Brief summary of what the changes actually do.
 
-**Description accuracy:** X/10 — how well the PR description matches the actual changes
+**Description accuracy:** X/10 — how well the PR description matches the actual changes  
+**Linear ticket alignment:** X/10 — how completely and accurately the PR resolves the linked ticket
+
+### Linear ticket coverage
+
+- **Met:** ...
+- **Partial:** ... `[#N]`
+- **Not met:** ... `[#N]`
+- **Out of scope:** ...
+- **Scope creep:** ... `[#N]`
 
 ---
 ```
