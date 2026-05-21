@@ -115,6 +115,7 @@ Each issue MUST follow this structured format:
 ## [#1] **Some issue title**
 
 **Introduced:** v1  
+**Severity:** Critical
 **Status:** OPEN  
 **Files:**
   - `file.ts:42`
