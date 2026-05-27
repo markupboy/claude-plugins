@@ -11,10 +11,19 @@ subagent, and run the pr-review-autosave:review skill.
 Run this gh CLI command to get all open PRs where I'm a requested reviewer:
 
 ```bash
-gh search prs --review-requested=@me --state=open --json number,title,url,headRefName,headRepository
+gh search prs --review-requested=@me --state=open --json number,title,url,repository
 ```
 
-Parse the JSON output to get: PR number, branch name, and repo owner/name.
+`gh search prs` does not expose the head branch as a JSON field, so for each PR
+you also need to fetch the branch name separately:
+
+```bash
+gh pr view "$PR_NUMBER" --repo "$OWNER/$REPO" --json headRefName -q .headRefName
+```
+
+For each PR, capture: PR number, title, URL, repo owner/name (from the
+`repository` field's `nameWithOwner`), and head branch name (from the per-PR
+`gh pr view` call above).
 
 ### 2. For each PR, locate the local repo and set up a worktree
 
