@@ -14,16 +14,17 @@ Run this gh CLI command to get all open PRs where I'm a requested reviewer:
 gh search prs --review-requested=@me --state=open --json number,title,url,repository
 ```
 
-`gh search prs` does not expose the head branch as a JSON field, so for each PR
-you also need to fetch the branch name separately:
+`gh search prs` does not expose the head branch or head SHA as JSON fields, so
+for each PR you also need to fetch them separately. Grab both in a single call:
 
 ```bash
-gh pr view "$PR_NUMBER" --repo "$OWNER/$REPO" --json headRefName -q .headRefName
+gh pr view "$PR_NUMBER" --repo "$OWNER/$REPO" --json headRefName,headRefOid
 ```
 
 For each PR, capture: PR number, title, URL, repo owner/name (from the
-`repository` field's `nameWithOwner`), and head branch name (from the per-PR
-`gh pr view` call above).
+`repository` field's `nameWithOwner`), head branch name (`headRefName`), and
+current head commit SHA (`headRefOid`, full 40-char SHA). The head SHA is used
+in step 2b to skip PRs that haven't changed since the last review.
 
 ### 2. For each PR, locate the local repo and set up a worktree
 
@@ -56,7 +57,39 @@ if [ -z "$LOCAL_REPO" ]; then
 fi
 ```
 
-**b. Fetch the PR branch and create a worktree:**
+**b. Skip if the PR is unchanged since the last review:**
+
+The `pr-review-autosave:review` skill records the short HEAD SHA on a
+`**Commit:**` line in each saved review file under `$LOCAL_REPO/pr_reviews/`.
+If the latest review for this PR was taken at the PR's current head commit,
+skip the PR — there's nothing new to review.
+
+```bash
+# Look for the most recent review file for this PR (handles versioned
+# re-reviews like review_123_v2.md by sorting -V so v10 > v9 > v2 > v1).
+LATEST_REVIEW=$(ls -1 "$LOCAL_REPO/pr_reviews/review_${PR_NUMBER}".md \
+                       "$LOCAL_REPO/pr_reviews/review_${PR_NUMBER}_v"*.md \
+                       2>/dev/null | sort -V | tail -n 1)
+
+if [ -n "$LATEST_REVIEW" ]; then
+  # Extract the short SHA from the `**Commit:** \`abc1234\`` header line.
+  LAST_REVIEWED_SHA=$(grep -m 1 -E '^\*\*Commit:\*\*' "$LATEST_REVIEW" \
+                      | sed -E 's/.*`([0-9a-fA-F]+)`.*/\1/')
+
+  # Compare as a prefix match — the review records the short hash, the PR API
+  # returns the full 40-char SHA. Lowercase both sides to be safe.
+  if [ -n "$LAST_REVIEWED_SHA" ] \
+     && [ "${HEAD_SHA:0:${#LAST_REVIEWED_SHA}}" = "$(echo "$LAST_REVIEWED_SHA" | tr '[:upper:]' '[:lower:]')" ]; then
+    echo "SKIP: PR #$PR_NUMBER unchanged since last review ($LAST_REVIEWED_SHA in $(basename "$LATEST_REVIEW"))"
+    continue
+  fi
+fi
+```
+
+Record skipped-as-unchanged PRs separately from skipped-as-no-local-checkout
+PRs so the final summary can distinguish them.
+
+**c. Fetch the PR branch and create a worktree:**
 
 ```bash
 # Make sure we have the latest ref for the PR branch
@@ -68,7 +101,7 @@ mkdir -p "$(dirname "$WORKTREE_PATH")"
 git -C "$LOCAL_REPO" worktree add "$WORKTREE_PATH" "origin/$HEAD_BRANCH"
 ```
 
-**c. Spawn a subagent for this PR using the Task tool:**
+**d. Spawn a subagent for this PR using the Task tool:**
 
 ```
 Task: Review PR #$PR_NUMBER in $OWNER/$REPO
@@ -94,6 +127,10 @@ git -C "$LOCAL_REPO" worktree remove "$WORKTREE_PATH" --force
   `.claude/commands/` or globally in `~/.claude/commands/`
 - Only PRs whose repo is already checked out as a subdirectory of `$PWD` are
   reviewed — others are reported as skipped at the end of the run
+- PRs whose latest existing review (in `$LOCAL_REPO/pr_reviews/`) was taken at
+  the PR's current head commit are also skipped automatically. To force a
+  re-review of an unchanged PR, delete or rename its review file before running
+  this skill.
 - Worktrees are created under `.pr-review-worktrees/` next to each repo so the
   original checkout is left untouched
 - Subagents run in parallel by default — all PRs are reviewed concurrently
