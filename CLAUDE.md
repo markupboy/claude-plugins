@@ -18,7 +18,7 @@ This is a **Claude Code plugin marketplace** repository. It contains Claude Code
 
 ### pr-review-autosave
 Wraps `pr-review-toolkit` and auto-saves review output. Single skill:
-- `review` — Auto-detects PR number (preferred) or falls back to branch name, saves to `review_{PR_NUMBER}.md`. Accepts optional filename argument. Saves to a `pr_reviews/` directory if one exists in the project.
+- `review` — Auto-detects PR number (preferred) or falls back to commit hash for WIP, saves to `review_{PR_NUMBER}.md` or `review_{SHORT_HASH}.md`. Accepts optional filename argument. Saves under `pr_reviews/` in the active git worktree.
 
 ### noteplan-import
 Saves Claude's long-form markdown research output into NotePlan 3 on macOS as a searchable note. Single skill:

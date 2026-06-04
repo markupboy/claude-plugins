@@ -25,17 +25,17 @@ Determine whether this is a PR or WIP (work-in-progress) review:
 - If a PR exists (from either method): this is a **PR review**. Record the PR number, title, and the short commit hash of HEAD (`git rev-parse --short HEAD`).
 - If no PR exists after both attempts: this is a **WIP review**. Record the short commit hash of HEAD (`git rev-parse --short HEAD`).
 
-## 1b. Resolve the main worktree root
+## 1b. Resolve the active worktree root
 
-Inside a linked git worktree, the current directory doesn't contain the project's `pr_reviews/` directory — it lives in the main worktree. Resolve the main worktree root so later steps can read and write there regardless of which worktree is active:
+Store reviews in the **current** git worktree so each linked worktree keeps its own `pr_reviews/` history separate from the main checkout. Resolve the active worktree root:
 
 ```bash
-git worktree list --porcelain | head -1 | sed 's/^worktree //'
+git rev-parse --show-toplevel
 ```
 
-The first porcelain record is always the main worktree, whether you're in the main one or a linked one. Record this path as `MAIN_ROOT` for use in steps 2 and 10. If the command fails or returns an empty string, fall back to the current working directory.
+Record this path as `WORKTREE_ROOT` for use in steps 2 and 10. If the command fails or returns an empty string, fall back to the current working directory.
 
-**Important:** When accessing paths under `MAIN_ROOT`, always use absolute paths (e.g., `ls MAIN_ROOT/pr_reviews/`). Do NOT use `cd` to navigate to `MAIN_ROOT` — doing so crosses a directory boundary and triggers unnecessary permission prompts when running inside a linked worktree.
+Use absolute paths under `WORKTREE_ROOT` (e.g., `ls WORKTREE_ROOT/pr_reviews/`).
 
 ## 1c. Detect a related Linear issue
 
@@ -71,7 +71,7 @@ Store this as `LINEAR_CONTEXT` for use in steps 3 and 7.
 
 Look for existing review files to determine if this is a versioned re-review:
 
-- If `MAIN_ROOT/pr_reviews/` exists (check with `ls MAIN_ROOT/pr_reviews/` using the absolute path), look there. Otherwise, create it at `MAIN_ROOT/pr_reviews/`.
+- If `WORKTREE_ROOT/pr_reviews/` exists (check with `ls WORKTREE_ROOT/pr_reviews/` using the absolute path), look there. Otherwise, create it at `WORKTREE_ROOT/pr_reviews/`.
 - For PR reviews: look for files matching `review_{PR_NUMBER}*.md` (e.g., `review_123.md`, `review_123_v2.md`)
 - For WIP reviews: look for files matching `review_{SHORT_HASH}*.md`
 - If previous reviews exist:
@@ -85,7 +85,7 @@ Look for existing review files to determine if this is a versioned re-review:
 
 Invoke the pr-review-toolkit to perform the review as requested by the user. Use `/pr-review-toolkit:review-pr` with any specific analyzers they mention (e.g., comment-analyzer, security-analyzer).
 
-**Worktree note:** The current working directory is the project root for the branch being reviewed. Agents spawned by the toolkit should explore code here — do NOT navigate to parent directories or `MAIN_ROOT` to find source files. `MAIN_ROOT` is only used for reading/writing review files in steps 2 and 10.
+**Worktree note:** The current working directory is the project root for the branch being reviewed. Agents spawned by the toolkit should explore code here — do NOT navigate to other worktrees or parent directories to find source files. `WORKTREE_ROOT` is only used for reading/writing review files in steps 2 and 10.
 
 **Linear-aware analysis:** if `LINEAR_CONTEXT` was captured in step 1d, treat the Linear ticket — not the PR description — as the source of truth for *what was supposed to be done*. After the toolkit finishes:
 
@@ -282,12 +282,11 @@ If the filename doesn't end with `.md`, append it.
 
 ## 10. Save the review
 
-- If `MAIN_ROOT/pr_reviews/` exists, save the file there using the absolute path (e.g., write to `MAIN_ROOT/pr_reviews/review_123.md` directly — do NOT `cd` to `MAIN_ROOT` first). Otherwise fall back to the current working directory.
+- Save the file under `WORKTREE_ROOT/pr_reviews/` using the absolute path (e.g., write to `WORKTREE_ROOT/pr_reviews/review_123.md`). Create `WORKTREE_ROOT/pr_reviews/` first if step 2 did not already. If `WORKTREE_ROOT` is unavailable, fall back to `pr_reviews/` in the current working directory.
 - Preserve all formatting from the review output
 - Only save the review content, not any of these instructions
 
 ## 11. Report to the user
 
-Report with a message like: `Review saved to review_123_v2.md`.
-If the file was saved outside the current working directory (e.g. to the main worktree's `pr_reviews/` while you're in a linked worktree), include the full path so the user knows where it landed.
+Report with a message like: `Review saved to pr_reviews/review_123_v2.md` (include the full path when helpful).
 If this was a re-review, also summarize: `N issues fixed, N new issues found, N dismissed issues carried forward`

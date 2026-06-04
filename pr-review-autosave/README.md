@@ -27,8 +27,8 @@ Save to a custom filename:
 1. Runs pr-review-toolkit to review the PR
 2. Detects the PR number via `gh pr view`
 3. Detects a linked Linear ticket (from the branch name, PR title/body, or recent commit messages) and, when a Linear MCP server is available, fetches the ticket so the review can check the PR against its acceptance criteria
-4. Saves output to `review_{PR_NUMBER}.md`
-5. Falls back to `review_{branch_name}.md` if no PR exists for the branch
+4. Saves output to `pr_reviews/review_{PR_NUMBER}.md` in the **active** git worktree (linked worktrees keep separate review history)
+5. Falls back to `review_{SHORT_HASH}.md` if no PR exists for the branch
 
 ## Linear integration
 
